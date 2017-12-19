@@ -1,10 +1,10 @@
 from __future__ import division
 
-from qtpy import QtWidgets, QtCore
-
-import dicom
-import numpy as np
 import os.path
+
+import numpy as np
+import pydicom
+from qtpy import QtWidgets, QtCore
 
 from .dicom_data import DicomData
 from .dicom_widget import DicomWidget
@@ -12,14 +12,14 @@ from .utils import dicom_files_in_dir
 
 
 class Viewer(QtWidgets.QMainWindow):
-    def __init__(self, path = None):
+    def __init__(self, path=None):
         super(Viewer, self).__init__()
         self.setWindowTitle("pydiq - Python DICOM Viewer in Qt")
         self.file = None
 
         self.high_hu = 2000
         self.low_hu = -1024
-       
+
         # self.pix_label = TrackingLabel(self)
         self.pix_label = DicomWidget(self)
 
@@ -47,7 +47,7 @@ class Viewer(QtWidgets.QMainWindow):
 
         self.hu_label = QtWidgets.QLabel("No image")
         self.c_label = QtWidgets.QLabel("")
-        self.cw_label = QtWidgets.QLabel("")        
+        self.cw_label = QtWidgets.QLabel("")
         self.x_label = QtWidgets.QLabel("")
         self.y_label = QtWidgets.QLabel("")
         self.z_label = QtWidgets.QLabel("")
@@ -57,7 +57,7 @@ class Viewer(QtWidgets.QMainWindow):
         self._zoom_level = 1
         self.mouse_x = -1
         self.mouse_y = -1
-       
+
         self.statusBar().addPermanentWidget(self.cw_label)
         self.statusBar().addPermanentWidget(self.ij_label)
         self.statusBar().addPermanentWidget(self.x_label)
@@ -93,11 +93,11 @@ class Viewer(QtWidgets.QMainWindow):
         if file_name:
             self.pix_label._image.save(file_name)
 
-    def build_menu(self): 
+    def build_menu(self):
         self.file_menu = QtWidgets.QMenu('&File', self)
         self.file_menu.addAction('&Open directory', self.open_directory, QtCore.Qt.CTRL + QtCore.Qt.Key_O)
         self.file_menu.addAction('&Export image', self.export_image, QtCore.Qt.CTRL + QtCore.Qt.Key_S)
-        self.file_menu.addAction('&Quit', self.close, QtCore.Qt.CTRL + QtCore.Qt.Key_Q)      
+        self.file_menu.addAction('&Quit', self.close, QtCore.Qt.CTRL + QtCore.Qt.Key_Q)
 
         self.view_menu = QtWidgets.QMenu('&View', self)
         self.view_menu.addAction('Zoom In', self.pix_label.increase_zoom, QtCore.Qt.CTRL + QtCore.Qt.Key_Plus)
@@ -118,7 +118,7 @@ class Viewer(QtWidgets.QMainWindow):
 
     def show_structure(self):
         if self.file_name:
-            f = dicom.read_file(self.file_name)
+            f = pydicom.read_file(self.file_name)
             l = QtWidgets.QLabel(str(f))
             l.show()
             # print(str(f))
@@ -146,7 +146,6 @@ class Viewer(QtWidgets.QMainWindow):
         self.series_list.clear()
         self.series = {}
 
-
         self.file_list.clear()
         self.files = files
         for file_name in self.files:
@@ -156,7 +155,6 @@ class Viewer(QtWidgets.QMainWindow):
         self.file_list.setMinimumWidth(self.file_list.sizeHintForColumn(0) + 20)
         if self.files:
             self.file_name = self.files[0]
-
 
     def get_coordinates(self, i, j):
         x = self.image_position[0] + self.pixel_spacing[0] * i
@@ -174,8 +172,10 @@ class Viewer(QtWidgets.QMainWindow):
         '''Mouse position in DICOM coordinates.'''
         if self.use_fractional_coordinates:
             # TODO: Fix for zoom out
-            correction = (self.zoom_factor - 1.) / (2. * self.zoom_factor) # To get center of left top pixel in a zoom grid
-            return self.get_coordinates(self.mouse_x / self.zoom_factor - correction, self.mouse_y / self.zoom_factor - correction)
+            correction = (self.zoom_factor - 1.) / (
+                    2. * self.zoom_factor)  # To get center of left top pixel in a zoom grid
+            return self.get_coordinates(self.mouse_x / self.zoom_factor - correction,
+                                        self.mouse_y / self.zoom_factor - correction)
         else:
             return self.get_coordinates(self.mouse_x // self.zoom_factor, self.mouse_y // self.zoom_factor)
 
@@ -191,7 +191,7 @@ class Viewer(QtWidgets.QMainWindow):
                 self.hu_label.setText("HU: %d" % int(self.data[i, j]))
                 return
             else:
-                self.hu_label.setText("HU: ???")     
+                self.hu_label.setText("HU: ???")
         else:
             self.hu_label.setText("No image")
         self.ij_label.setText("")
@@ -224,5 +224,3 @@ class Viewer(QtWidgets.QMainWindow):
             # except:
             #     self.image_position = np.array([1., 1., 1.])
             # self.pixel_spacing = np.array([float(t) for t in self.file.PixelSpacing])
-
-
